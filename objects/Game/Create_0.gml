@@ -6,13 +6,11 @@ enum tileType
 	mine = -1
 }
 
-mineCount = 25
-
-myArray = []
-mxArray = []
-
+mineCount = 0
 gridWidth = 9
 gridHeight = 9
+
+firstMove = true
 
 tileData = {
 	isFlagged : false,
@@ -21,7 +19,9 @@ tileData = {
 }
 
 grid = ds_grid_create(gridWidth, gridHeight)
-function instanciateGrid() {
+
+function instanciateGrid()
+{
     randomize();
     var validCoordinates = [];
 
@@ -52,14 +52,16 @@ function instanciateGrid() {
         placedMines++;
     }
 }
-function toggleFlagTile(gx, gy) {
+function toggleFlagTile(gx, gy)
+{
     var tileData = ds_grid_get(grid, gx, gy);
 
     // Toggle the isFlagged property of the tile
     tileData.isFlagged = !tileData.isFlagged;
     ds_grid_set(grid, gx, gy, tileData);
 }
-function findNumbers() {
+function findNumbers()
+{
     for (var gy = 0; gy < gridHeight; gy++) {
         for (var gx = 0; gx < gridWidth; gx++) {
             var currentTile = ds_grid_get(grid, gx, gy);
@@ -82,128 +84,69 @@ function findNumbers() {
     }
 }
 
-function adjacentMines(gx, gy)
+function revealTiles(gx, gy)
 {
-	var adjacent = false
-	for (iy = -1; iy <= 1; iy++)
+	var tileData = ds_grid_get(grid, gx, gy);
+	gx -= 1
+	gy -= 1
+	// if not bomb
+	if (tileData.tileIndex != -1)
 	{
-		for (ix = -1; ix <= 1; ix++)
+		//check the tiles in the x axis
+		for (ix = gx; ix <= 1; ix++)
 		{
-			if (!(gx + ix < 0) || !(gx + ix > gridWidth) || !(gy + iy < 0) || !(gy + iy > gridHeight))
+			//check the tiles in the y axis
+			for (iy = gy; iy <= 1; iy++)
 			{
-				var tileData = ds_grid_get(grid, gx, gy);
-				if (tileData.tileIndex == tileType.mine)
+				//bounds checking iy >= 0 || iy < gridHeight || ix >= 0 || ix < gridWidth
+				if (true)
 				{
-					adjacent = true
+					//re-get the struct from the surrounding tiles (including the tile clicked)
+					tileData = ds_grid_get(grid, ix, iy);
+					//check if the surrounding tile is a bomb, if it is not then make it visible and then run the function again on that tile.
+					if (tileData.tileIndex != -1)
+					{
+						tileData.isVisible = true
+						ds_grid_set(grid, ix, iy, tileData)
+						revealTiles(ix, iy)
+					}
 				}
 			}
-		}
-	}
-	return adjacent
-}
-function revealAdjacent(gx, gy)
-{
-	for (iy = -1; iy <= 1; iy++)
-	{
-		for (ix = -1; ix <= 1; ix++)
+		}	
+		firstMove = false
+	} else {
+		// OOPS YOU MESSED UP
+		
+		//pretty much if you hit a bomb redo everything and do it again from the same spot (IF its the first move!)
+		if (firstMove)
 		{
-			if (!(gx + ix < 0) || !(gx + ix > gridWidth) || !(gy + iy < 0) || !(gy + iy > gridHeight))
-			{
-				var tileData = ds_grid_get(grid, gx, gy);
-				tileData.isVisible = true
-			}
+			instanciateGrid()
+			findNumbers()
+			revealTiles(gx, gy)
 		}
 	}
 }
-function revealTiles(gx, gy) {
-	var a = gx
-	var b = gy
-	function revealRight(gx, gy)
-	{
-		for(a = gx; a < gridWidth && !adjacentMines(a , gy); a++)
-		{
-			revealAdjacent(a, gy)
-			return adjacentMines(a, gy)
-		}
-	}
-	function revealLeft(gx, gy)
-	{
-		for(a = gx; a > 1 && !adjacentMines(a , gy); a--)
-		{
-			revealAdjacent(a, gy)
-			return adjacentMines(a, gy)
-		}
-	}
-	function revealUp(gx, gy)
-	{
-		for(a = gy; a > 1 && !adjacentMines(gx , a); a--)
-		{
-			revealAdjacent(gx, a)
-			return adjacentMines(gx, a)
-		}
-	}
-	function revealDown(gx, gy)
-	{
-		for(a = gy; a < gridHeight && !adjacentMines(gx , a); a++)
-		{
-			revealAdjacent(gx, a)
-			return adjacentMines(gx, a)
-		}
-	}
-	function revealX(gx, gy)
-	{
-		if (revealRight(gx, gy) || revealLeft(gx, gy) || revealUp(gx, gy) || revealDown(gx, gy))
-		{
-			return true
-		}
-	}
-	do
-	{
-		a--
-	}
-	until (!revealX(a, gy))
-	a = gx
-	do
-	{
-		a++
-	}
-	until (!revealX(a, gy))
-	b = gy
-	do
-	{
-		b--
-	}
-	until (!revealX(gx, b))
-	b = gy
-	do
-	{
-		b++
-	}
-	until (!revealX(gx, b))
-}
-
-
 
 instanciateGrid()
 findNumbers()
-//revealTiles(4, 4)
+revealTiles(4, 4)
 
 // ---DEBUG---
-// ---WARNING--- use only on small maps. will take forever to click all the "okay" buttons
 if true
 {
-	sa = []
-	for (gx = 0; gx < gridWidth; gx++)
-	{
-		for (gy = 0; gy < gridHeight; gy++)
-		{
-			tileData = ds_grid_get(grid, gx, gy)
-			array_push(sa, tileData.tileIndex)
-			
-			
-		}
-	}
-	show_message(sa)
-	clipboard_set_text(sa)
+    sa = ""
+    for (gx = 0; gx < gridWidth; gx++)
+    {
+        for (gy = 0; gy < gridHeight; gy++)
+        {
+            tileData = ds_grid_get(grid, gx, gy)
+            sa += string(tileData.isVisible) + ", "
+            
+            
+        }
+        sa += "\n"
+    }
+    show_message(sa)
+    clipboard_set_text(sa)
 }
 //show_message()
